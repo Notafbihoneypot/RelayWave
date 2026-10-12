@@ -24,7 +24,7 @@ bash /root/relaywave-install.sh
 Expected SHA-256 for this initial installer:
 
 ```
-990eeb3e7728123d58a38a5c8aecc042dda2712a3eb0b5f9bedd95032ab44a35
+58d8b603a14d2750d97405991bebe66414f2881bfc95f6b565af113cbc85ea3b
 ```
 
 ## Defaults
@@ -67,3 +67,13 @@ curl -fsSL https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/diag
 If you chose a custom VM name, pass its VMID: `bash /root/relaywave-diagnose.sh 123`.
 
 The tool reports VM status, whether the guest agent responds, Cloud-Init progress, recent bootstrap logs, Podman status, and the app service/container state. It does not change or delete anything. **Review any network addresses or sensitive log lines before sharing output.** If no VM exists, send the error printed by the original installer. The installer currently cannot diagnose a failed stage without its terminal output or guest logs.
+
+### Recover an existing VM after the nftables/Podman netavark failure
+
+If VM `103` named `podcast-test` exists but the app cannot start, **do not rerun install.sh** (which would create another VM). Run on PVE1:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/repair-vm.sh -o /root/relaywave-repair.sh && bash /root/relaywave-repair.sh 103
+```
+
+This checks the VM name, requires the guest agent, installs `nftables` **inside VM 103**, restarts `opencast-test.service`, and reports the actual service status. It never deletes or creates VMs. If the app still fails, share the printed error without private data.
