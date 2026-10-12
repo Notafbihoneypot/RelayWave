@@ -55,3 +55,15 @@ Installer prompts allow changing these defaults. It creates the VM, embeds the a
 - Protect the generated VM login password and the Cloud-Init snippet containing its password hash.
 
 To troubleshoot after creation, open the VM console and run `sudo tail -f /var/log/opencast-bootstrap.log`. To remove it, use the VMID reported by the script and confirm the VM is the test VM before destroying it.
+
+## If the installer appears to fail
+
+**Do not rerun the installer immediately**: the script may already have created a VM. On PVE1, run the read-only diagnostic helper:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/diagnose.sh -o /root/relaywave-diagnose.sh && bash /root/relaywave-diagnose.sh
+```
+
+If you chose a custom VM name, pass its VMID: `bash /root/relaywave-diagnose.sh 123`.
+
+The tool reports VM status, whether the guest agent responds, Cloud-Init progress, recent bootstrap logs, Podman status, and the app service/container state. It does not change or delete anything. **Review any network addresses or sensitive log lines before sharing output.** If no VM exists, send the error printed by the original installer. The installer currently cannot diagnose a failed stage without its terminal output or guest logs.
