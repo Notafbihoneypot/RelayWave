@@ -153,6 +153,15 @@ cat >> "$USERDATA_PATH" <<'EOF_CI'
       tar -xzf /root/opencast-payload.tar.gz -C /root/opencast-payload
       export OPENCAST_NONINTERACTIVE=1
       cd /root/opencast-payload/OpenCast-Proxmox-Test
+      # Podman 5.x defaults to netavark networking, which calls nft.
+      # Debian's Podman package can be installed without the nftables CLI,
+      # causing the first podman build to fail with 'unable to execute nft'.
+      if ! command -v nft >/dev/null 2>&1; then
+        echo "Installing nftables CLI required by Podman netavark..."
+        export DEBIAN_FRONTEND=noninteractive
+        apt-get update
+        apt-get install -y --no-install-recommends nftables
+      fi
       ./install-in-vm.sh
       echo "Bootstrap complete."
 runcmd:
