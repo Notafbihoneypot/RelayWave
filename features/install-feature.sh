@@ -119,6 +119,12 @@ fi
 # make both app and Blossom base images explicit, including on future restarts.
 curl -fsSL --retry 3 https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/features/qualify-images.sh -o /root/relaywave-qualify-images.sh
 bash /root/relaywave-qualify-images.sh /opt/opencast-test
+curl -fsSL --retry 3 https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/features/repair-runtime.sh -o /root/relaywave-repair-runtime.sh
+bash /root/relaywave-repair-runtime.sh /opt/opencast-test
+if ! dpkg-query -W -f='${Status}' aardvark-dns 2>/dev/null | grep -qx 'install ok installed'; then
+  apt-get update
+  DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends aardvark-dns
+fi
 systemctl restart opencast-test.service
 systemctl is-active --quiet opencast-test.service
 echo "RelayWave feed-claim feature installed. Existing application data preserved."
