@@ -115,6 +115,10 @@ if ! command -v nft >/dev/null 2>&1; then
   apt-get update
   DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends nftables
 fi
+# Podman defaults on Debian have no unqualified Docker Hub image search;
+# make both app and Blossom base images explicit, including on future restarts.
+curl -fsSL --retry 3 https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/features/qualify-images.sh -o /root/relaywave-qualify-images.sh
+bash /root/relaywave-qualify-images.sh /opt/opencast-test
 systemctl restart opencast-test.service
 systemctl is-active --quiet opencast-test.service
 echo "RelayWave feed-claim feature installed. Existing application data preserved."
