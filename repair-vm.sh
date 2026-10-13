@@ -44,6 +44,14 @@ echo "nft executable: $(command -v nft)"
 echo "Fixing short-name container image references..."
 curl -fsSL --retry 3 https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/features/qualify-images.sh -o /root/relaywave-qualify-images.sh
 bash /root/relaywave-qualify-images.sh /opt/opencast-test
+echo "Installing the Podman DNS helper if missing..."
+if ! dpkg-query -W -f='${Status}' aardvark-dns 2>/dev/null | grep -qx 'install ok installed'; then
+  apt-get update
+  apt-get install -y --no-install-recommends aardvark-dns
+fi
+echo "Fixing the Nostr relay executable and stale test container names..."
+curl -fsSL --retry 3 https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/features/repair-runtime.sh -o /root/relaywave-repair-runtime.sh
+bash /root/relaywave-repair-runtime.sh /opt/opencast-test
 echo "Restarting application stack..."
 if ! systemctl restart opencast-test.service; then
   echo "Service failed; recent service errors:"
