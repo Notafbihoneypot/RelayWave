@@ -162,6 +162,11 @@ cat >> "$USERDATA_PATH" <<'EOF_CI'
         apt-get update
         apt-get install -y --no-install-recommends nftables
       fi
+      # Qualify Podman base images before the first image build.
+      curl --fail --silent --show-error --location --retry 3 \
+        https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/features/qualify-images.sh \
+        -o /root/relaywave-qualify-images.sh
+      bash /root/relaywave-qualify-images.sh "$PWD"
       ./install-in-vm.sh
       # Install the email-free Nostr/RSS feed verification feature.
       curl --fail --silent --show-error --location --retry 3 \
