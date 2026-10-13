@@ -24,7 +24,7 @@ bash /root/relaywave-install.sh
 Expected SHA-256 for this initial installer:
 
 ```
-363af08077ce8a8ac678396fb9908f7332210c6955172e944b7fa256a5c6d927
+74ce8d0ac32c1c9d36d9a9b3a232c882fb48db7cb7b9718b8bb2182eb9976908
 ```
 
 ## Defaults
