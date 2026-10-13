@@ -167,6 +167,17 @@ cat >> "$USERDATA_PATH" <<'EOF_CI'
         https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/features/qualify-images.sh \
         -o /root/relaywave-qualify-images.sh
       bash /root/relaywave-qualify-images.sh "$PWD"
+      # Debian Podman uses aardvark-dns to serve DNS inside its bridge network.
+      if ! dpkg-query -W -f='${Status}' aardvark-dns 2>/dev/null | grep -qx 'install ok installed'; then
+        apt-get update
+        DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends aardvark-dns
+      fi
+      # The upstream relay image defines a CMD, not an ENTRYPOINT.
+      # Repair container name collisions after interrupted previous starts.
+      curl --fail --silent --show-error --location --retry 3 \
+        https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/features/repair-runtime.sh \
+        -o /root/relaywave-repair-runtime.sh
+      bash /root/relaywave-repair-runtime.sh "$PWD"
       ./install-in-vm.sh
       # Install the email-free Nostr/RSS feed verification feature.
       curl --fail --silent --show-error --location --retry 3 \
