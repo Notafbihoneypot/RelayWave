@@ -24,7 +24,7 @@ bash /root/relaywave-install.sh
 Expected SHA-256 for this initial installer:
 
 ```
-58d8b603a14d2750d97405991bebe66414f2881bfc95f6b565af113cbc85ea3b
+363af08077ce8a8ac678396fb9908f7332210c6955172e944b7fa256a5c6d927
 ```
 
 ## Defaults
@@ -77,3 +77,22 @@ curl -fsSL https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/repa
 ```
 
 This checks the VM name, requires the guest agent, installs `nftables` **inside VM 103**, restarts `opencast-test.service`, and reports the actual service status. It never deletes or creates VMs. If the app still fails, share the printed error without private data.
+
+## Verify an existing podcast without email
+
+The single-node installer now includes a private RSS administrative-control challenge.
+Open **Import podcast** in the dashboard, connect a Nostr signer (the disposable test signer works only on your trusted LAN), paste the current podcast RSS feed and generate a one-time code.
+
+Add the code to the **original host** as a channel-level Podcasting 2.0 TXT field with `purpose="verify"`. Save the feed, return to RelayWave and choose **Verify ownership**. Claims are linked to the authenticated Nostr public key. Challenges last 30 minutes. The verifier fetches only public HTTPS feeds with pinned public DNS addresses, no redirects, strict size limits and no contact with private network addresses.
+
+This build **only verifies administrative feed control**. It does not copy media, publish imported RSS, notify directories, or redirect listeners. Feed host must expose Podcast TXT editing. No email is collected.
+
+### Upgrade an existing RelayWave test VM
+
+**Do not rerun `install.sh` on PVE1.** That creates another VM. For the existing `podcast-test` VM 103, run as root on PVE1:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/update-vm.sh -o /root/relaywave-update.sh && bash /root/relaywave-update.sh 103
+```
+
+This uses Proxmox guest-agent execution to update only the application source inside VM 103, rebuild/restart the Podman stack and keep persistent volumes intact. The feature updater can also run again safely and does not change any other VM.
