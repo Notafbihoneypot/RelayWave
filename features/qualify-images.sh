@@ -51,5 +51,14 @@ if marker not in a:
     )
     start.write_text(a.replace(needle,prefix+needle,1))
     print(f"Patched persistent Podman startup: {start}")
+# The installer binds HTTP ports to LAN_IP, not localhost.
+# Report accurate status instead of false FAIL on all healthy containers.
+status_script = (root/"scripts"/"status.sh") if (root/"scripts"/"status.sh").is_file() else (root/"stack"/"scripts"/"status.sh")
+if status_script.is_file():
+    a=status_script.read_text()
+    b=a.replace("http://127.0.0.1:", "http://\u0024{LAN_IP:-127.0.0.1}:")
+    if a!=b:
+        status_script.write_text(b)
+        print(f"Fixed LAN-bound health checks: {status_script}")
 print("Podman base image references are qualified.")
 PY
