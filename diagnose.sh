@@ -1,50 +1,70 @@
 #!/usr/bin/env bash
-set -u
-
-# Read-only RelayWave diagnostic helper. Run as root on the PVE host.
-# Never collects VM passwords, cloud-init user-data or private keys.
-if [[ "${EUID:-$(id -u)}" != 0 ]]; then echo "Run as root on PVE1."; exit 1; fi
-if ! command -v qm >/dev/null 2>&1; then echo "Proxmox qm tool not found."; exit 1; fi
-
-echo "===== Host ====="
+set -Eeuo pipefail
+# Read-only diagnostics for the existing RelayWave Proxmox test VM.
+# Does not reinstall Podman, modify the VM, or read secrets.
+VMID="${1:-103}"
+if [[ ${EUID:-$(id -u)} -ne 0 ]]; then echo "Run on PVE1 as root" >&2; exit 1; fi
+command -v qm >/dev/null || { echo "Proxmox qm not found" >&2; exit 1; }
+command -v python3 >/dev/null || { echo "Python 3 is needed to decode guest-agent results" >&2; exit 1; }
+[[ "$VMID" =~ ^[0-9]+$ ]] || { echo "Expected numeric VMID" >&2; exit 1; }
+echo "===== PVE host ====="
 hostname
-pveversion 2>&1 | head -n 2
+pveversion | head -n 1
 echo
-echo "===== Possible RelayWave VMs ====="
-qm list 2>&1 | head -n 30
-echo
-VMID="${1:-}"
-if [[ -z "$VMID" ]]; then
-  mapfile -t FOUND < <(qm list 2>/dev/null | awk 'NR>1 && ($2=="podcast-test" || $2=="relaywave") {print $1}')
-  if [[ ${#FOUND[@]} == 1 ]]; then VMID="${FOUND[0]}"; fi
-fi
-if [[ -z "$VMID" ]]; then
-  echo "No unique 'podcast-test' or 'relaywave' VM detected."
-  echo "If the installer stopped before VM creation, please share its last error lines."
-  echo "If it created a VM with a custom name, run: bash diagnose.sh <VMID>"
-  exit 0
-fi
-if ! [[ "$VMID" =~ ^[0-9]+$ ]]; then echo "Invalid VMID."; exit 1; fi
-
-echo "===== VM $VMID ====="
-qm status "$VMID" 2>&1 || exit 1
-# Exclude credentials, cloud-init text, and private data.
-qm config "$VMID" 2>/dev/null | grep -E '^(name|boot|ide2|scsi0|net0|ipconfig0|agent|memory|cores|cicustom):' | sed -E 's@^(cicustom:).*@\1 [configured, content hidden]@'
-echo
-echo "===== QEMU guest-agent ====="
+echo "===== RelayWave VM ====="
+qm status "$VMID"
+qm config "$VMID" | grep -E '^(name|agent|memory|cores|scsi0|net0):' || true
 if ! qm guest cmd "$VMID" ping >/dev/null 2>&1; then
-  echo "Guest agent unavailable. VM may still be booting, have no network, or Cloud-Init did not install qemu-guest-agent."
-  echo "Open the Proxmox VM console and run:"
-  echo "  sudo cloud-init status --long"
-  echo "  sudo tail -n 70 /var/log/cloud-init-output.log"
-  echo "  sudo tail -n 70 /var/log/opencast-bootstrap.log"
-  exit 0
+  echo "Guest agent not responding. Check the Proxmox VM console."
+  exit 1
 fi
 
-echo "===== Guest bootstrap/cloud-init/service diagnostics ====="
-CMD='echo "[Cloud-Init]"; cloud-init status --long 2>&1 || true; echo "[Bootstrap tail]"; if [ -f /var/log/opencast-bootstrap.log ]; then tail -n 80 /var/log/opencast-bootstrap.log; else echo "No bootstrap log yet"; fi; echo "[Podman]"; command -v podman && podman --version || true; echo "[Service]"; systemctl --no-pager --full status opencast-test.service 2>&1 | tail -n 45 || true; echo "[Containers]"; podman ps -a --format "{{.Names}} {{.Status}}" 2>&1 | head -n 30 || true; echo "[App check]"; if [ -f /etc/opencast-test.env ]; then . /etc/opencast-test.env; curl -sS --max-time 3 -o /dev/null -w "HTTP %{http_code}\\n" "http://$LAN_IP:8080/api/config" || true; else echo "Guest install has not written env file"; fi'
-qm guest exec "$VMID" --timeout 40 -- /bin/bash -lc "$CMD" 2>&1 | head -c 25000
-
+CMD='
+echo "===== Systemd service ====="
+systemctl is-active opencast-test.service || true
+systemctl status opencast-test.service --no-pager -l 2>&1 | tail -n 55 || true
 echo
-echo "===== End ====="
-echo "Review output for private network information before sharing."
+echo "===== Latest service journal (new error should appear here) ====="
+journalctl -u opencast-test.service --no-pager --output=short-iso -n 120 2>&1 | tail -n 120 || true
+echo
+echo "===== Podman networks and images ====="
+podman --version || true
+command -v nft && nft --version || echo "nftables CLI missing"
+podman network ls 2>&1 | head -n 20 || true
+podman images --format "{{.Repository}}:{{.Tag}}  {{.Size}}" 2>&1 | head -n 20 || true
+echo
+echo "===== Podman containers ====="
+podman ps -a --format "{{.Names}}  {{.Status}}" 2>&1 | head -n 35 || true
+for c in opencast-app opencast-blossom opencast-relay opencast-edge; do
+  if podman container exists "$c" 2>/dev/null; then
+    echo "--- $c recent logs ---"
+    podman logs --tail 15 "$c" 2>&1 || true
+  fi
+done
+echo
+echo "===== Deployment files ====="
+for f in /opt/opencast-test/app/server.mjs /opt/opencast-test/app/feed-claims.mjs /opt/opencast-test/app/public/feed-ui.js /opt/opencast-test/scripts/start.sh; do
+  if test -f "$f"; then echo "PRESENT $f"; else echo "MISSING $f"; fi
+done
+echo
+echo "===== Disk capacity ====="
+df -h / | tail -n 1
+'
+RESULT="$(qm guest exec "$VMID" --timeout 90 -- /bin/bash -lc "$CMD")" || {
+  echo "Unable to run diagnostics inside VM $VMID" >&2; exit 1;
+}
+printf '%s\n' "$RESULT" | python3 -c '
+import json,sys
+try: obj=json.load(sys.stdin)
+except ValueError:
+    print("Guest-agent returned invalid JSON",file=sys.stderr)
+    sys.exit(1)
+for key in ("out-data","err-data"):
+    value=obj.get(key,"")
+    if value:
+        print(value,end="" if value.endswith("\n") else "\n")
+if obj.get("out-truncated") or obj.get("err-truncated"):
+    print("Warning: some guest output was truncated.")
+print("Diagnostic exit code:", obj.get("exitcode","unknown"))
+'
+echo "Review the output before sharing. Do not include private keys, tokens, or passwords."
