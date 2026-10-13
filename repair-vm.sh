@@ -2,7 +2,7 @@
 set -Eeuo pipefail
 
 # In-place recovery for the initial RelayWave Debian 13 test VM on Proxmox.
-# Only installs nftables inside VM 103 (or given VMID) and restarts its app.
+# Installs missing nftables, fixes explicit Podman image references and restarts the stack.
 # Does not install anything on the Proxmox host or recreate the VM.
 VMID="${1:-103}"
 if [[ "${EUID:-$(id -u)}" -ne 0 ]]; then
@@ -41,6 +41,9 @@ if ! command -v nft >/dev/null 2>&1; then
   apt-get install -y --no-install-recommends nftables
 fi
 echo "nft executable: $(command -v nft)"
+echo "Fixing short-name container image references..."
+curl -fsSL --retry 3 https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/features/qualify-images.sh -o /root/relaywave-qualify-images.sh
+bash /root/relaywave-qualify-images.sh /opt/opencast-test
 echo "Restarting application stack..."
 if ! systemctl restart opencast-test.service; then
   echo "Service failed; recent service errors:"
