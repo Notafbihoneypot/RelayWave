@@ -76,7 +76,7 @@ If VM `103` named `podcast-test` exists but the app cannot start, **do not rerun
 curl -fsSL https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/repair-vm.sh -o /root/relaywave-repair.sh && bash /root/relaywave-repair.sh 103
 ```
 
-This checks the VM name, requires the guest agent, installs `nftables` **inside VM 103**, restarts `opencast-test.service`, and reports the actual service status. It never deletes or creates VMs. If the app still fails, share the printed error without private data.
+This checks the VM name, requires the guest agent, installs `nftables` if missing, qualifies the upstream Deno/Node container images for Podman, restarts `opencast-test.service`, and reports actual service status. It never deletes or creates VMs. If the app still fails, share the printed error without private data.
 
 ## Verify an existing podcast without email
 
@@ -96,3 +96,7 @@ curl -fsSL https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/upda
 ```
 
 This uses Proxmox guest-agent execution to update only the application source inside VM 103, rebuild/restart the Podman stack and keep persistent volumes intact. The feature updater can also run again safely and does not change any other VM.
+
+### Repair the Blossom short-name build error
+
+On Debian 13 with Podman's default strict registry configuration, a vendored Blossom Dockerfile containing `FROM denoland/deno:debian` fails because it has no fully qualified registry. The in-place repair command above patches this to `docker.io/denoland/deno:debian` and makes the correction persist through service restarts. It also qualifies the app's Node base image and corrects health checks for LAN-only bindings. The fresh VM installer has the same correction before its first build. Avoid weakening Podman policy by adding an unqualified registry search path.
