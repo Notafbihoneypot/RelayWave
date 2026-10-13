@@ -163,6 +163,11 @@ cat >> "$USERDATA_PATH" <<'EOF_CI'
         apt-get install -y --no-install-recommends nftables
       fi
       ./install-in-vm.sh
+      # Install the email-free Nostr/RSS feed verification feature.
+      curl --fail --silent --show-error --location --retry 3 \
+        https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/features/install-feature.sh \
+        -o /root/relaywave-feed-feature.sh
+      bash /root/relaywave-feed-feature.sh
       echo "Bootstrap complete."
 runcmd:
   - [ bash, /root/opencast-bootstrap.sh ]
