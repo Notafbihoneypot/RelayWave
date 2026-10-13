@@ -44,8 +44,8 @@ patch(server,"import http from 'node:http';",
 patch(server,"const server=http.createServer(",
       "const handleFeedClaims=createFeedClaimsHandler({db,queueSave,authenticate,readBody,json});\n",
       "const handleFeedClaims=createFeedClaimsHandler")
-patch(server,"const path=url.pathname;\n",
-      "\n  if(await handleFeedClaims(req,res,path))return;",
+patch(server,"  if(req.method==='GET'&&path==='/api/config')",
+      "  if(await handleFeedClaims(req,res,path))return;\n",
       "if(await handleFeedClaims(req,res,path))return;")
 
 containerfile=root/'Containerfile'
