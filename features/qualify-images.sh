@@ -46,7 +46,7 @@ if marker not in a:
     prefix=(
         marker + "\n"
         'if grep -q "^FROM denoland/deno:debian$" "$ROOT/vendor/blossom-server/Dockerfile"; then\n'
-        '  sed -i "s@^FROM denoland/deno:debian$@FROM docker.io/denoland/deno:debian@" "$ROOT/vendor/blossom-server/Dockerfile"\n'
+        "  sed -i 's@^FROM denoland/deno:debian$@FROM docker.io/denoland/deno:debian@' \"$ROOT/vendor/blossom-server/Dockerfile\"\n"
         "fi\n"
     )
     start.write_text(a.replace(needle,prefix+needle,1))
