@@ -50,8 +50,8 @@ if ! dpkg-query -W -f='${Status}' aardvark-dns 2>/dev/null | grep -qx 'install o
   apt-get install -y --no-install-recommends aardvark-dns
 fi
 echo "Fixing the Nostr relay executable and stale test container names..."
-curl -fsSL --retry 3 https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/features/repair-runtime.sh -o /root/relaywave-repair-runtime.sh
-bash /root/relaywave-repair-runtime.sh /opt/opencast-test
+curl -fsSL --retry 3 https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/e8aa237190ae0e65702a2359ff42d0fb609dd3e5/features/repair-runtime-v2.sh -o /root/relaywave-repair-runtime-v2.sh
+bash /root/relaywave-repair-runtime-v2.sh /opt/opencast-test
 echo "Restarting application stack..."
 if ! systemctl restart opencast-test.service; then
   echo "Service failed; recent service errors:"
