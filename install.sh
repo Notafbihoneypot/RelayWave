@@ -175,8 +175,8 @@ cat >> "$USERDATA_PATH" <<'EOF_CI'
       # The upstream relay image defines a CMD, not an ENTRYPOINT.
       # Repair container name collisions after interrupted previous starts.
       curl --fail --silent --show-error --location --retry 3 \
-        https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/features/repair-runtime.sh \
-        -o /root/relaywave-repair-runtime.sh
+        https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/features/repair-runtime-v2.sh \
+        -o /root/relaywave-repair-runtime-v2.sh
       bash /root/relaywave-repair-runtime.sh "$PWD"
       ./install-in-vm.sh
       # Install the email-free Nostr/RSS feed verification feature.
