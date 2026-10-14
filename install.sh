@@ -177,7 +177,7 @@ cat >> "$USERDATA_PATH" <<'EOF_CI'
       curl --fail --silent --show-error --location --retry 3 \
         https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/features/repair-runtime-v2.sh \
         -o /root/relaywave-repair-runtime-v2.sh
-      bash /root/relaywave-repair-runtime.sh "$PWD"
+      bash /root/relaywave-repair-runtime-v2.sh "$PWD"
       ./install-in-vm.sh
       # Install the email-free Nostr/RSS feed verification feature.
       curl --fail --silent --show-error --location --retry 3 \
