@@ -28,7 +28,7 @@ if image not in source:
 import re
 launch = re.compile(
     r'(?<![A-Za-z0-9/])' + re.escape(image) +
-    r'(?P<gap>(?:[ \\t\\r\\n]|\\\\r?\\n)+)(?=-addr(?:[= \\t\\r\\n]|$))'
+    r'(?P<gap>(?:\s|\\\s*)+)(?=-addr(?:\s|=|$))'
 )
 matches = list(launch.finditer(source))
 if len(matches) != 1:
