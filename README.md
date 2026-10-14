@@ -24,7 +24,7 @@ bash /root/relaywave-install.sh
 Expected SHA-256 for this initial installer:
 
 ```
-19d883a4d0767ff8f54fd9a12ed73c164326388ef4f541f7b2157a4ca7bec080
+b903baee8a8c2259a135462b8d5f955efd0743fe1d12595abdc8e1ccc1b7fb06
 ```
 
 ## Defaults
@@ -100,3 +100,15 @@ This uses Proxmox guest-agent execution to update only the application source in
 ### Repair the Blossom short-name build error
 
 On Debian 13 with Podman's default strict registry configuration, a vendored Blossom Dockerfile containing `FROM denoland/deno:debian` fails because it has no fully qualified registry. The in-place repair command above patches this to `docker.io/denoland/deno:debian` and makes the correction persist through service restarts. It also qualifies the app's Node base image and corrects health checks for LAN-only bindings. The fresh VM installer has the same correction before its first build. Avoid weakening Podman policy by adding an unqualified registry search path.
+
+### Existing VM 103: tested relay startup repair v2
+
+The original RelayWave test bundle references `ghcr.io/mattn/nostr-relay:latest` three times (image lookup, pull, launch). The earlier repair failed by expecting only one occurrence. The new helper changes only the actual `podman run` command, ensures stale test containers can be removed without deleting bind-mounted data, and keeps the change idempotent.
+
+Download the versioned repair **on PVE1** (do not reuse any old local `repair-vm.sh` download):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/repair-vm-v2.sh -o /root/relaywave-repair-v2.sh && bash /root/relaywave-repair-v2.sh 103
+```
+
+The repair script pins the v2 runtime helper to commit `e8aa237` to avoid accidentally executing a cached older helper. No VM recreation or data-directory deletion is performed.
