@@ -32,7 +32,7 @@ if ! qm guest cmd "$VMID" ping >/dev/null 2>&1; then
 fi
 
 echo "Repairing RelayWave test VM $VMID ($NAME) in place..."
-GUEST_COMMAND='
+GUEST_COMMAND="$(cat <<'GUEST_SCRIPT'
 set -Eeuo pipefail
 export DEBIAN_FRONTEND=noninteractive
 if ! command -v nft >/dev/null 2>&1; then
@@ -71,7 +71,8 @@ else
   podman ps -a --format "{{.Names}} {{.Status}}" || true
   exit 1
 fi
-'
+GUEST_SCRIPT
+)"
 
 if ! RESPONSE="$(qm guest exec "$VMID" --timeout 900 -- /bin/bash -lc "$GUEST_COMMAND" 2>&1)"; then
   echo "Failed to run the repair inside the guest:" >&2
