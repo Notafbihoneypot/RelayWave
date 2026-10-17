@@ -112,3 +112,15 @@ curl -fsSL https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/repa
 ```
 
 The repair script pins the v2 runtime helper to commit `e8aa237` to avoid accidentally executing a cached older helper. No VM recreation or data-directory deletion is performed.
+
+## Retro-2000s visual preview
+
+An optional, independent retro-themed RelayWave landing-page preview is now available in [themes/retro-2000](themes/retro-2000). It reproduces the selected blue/silver bevelled sidebar, yellow action buttons, pixel-art sunset and compact dashboard preview without changing the working app or its data.
+
+From **PVE1**, run:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/themes/retro-2000/deploy-to-vm.sh -o /root/relaywave-retro-deploy.sh && bash /root/relaywave-retro-deploy.sh 103
+```
+
+Preview at **http://192.168.1.32:8080/retro.html**; original dashboard remains at **http://192.168.1.32:8080/**. This is a test preview, not yet a replacement theme for the real dashboard.
