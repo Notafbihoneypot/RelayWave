@@ -50,3 +50,26 @@ The current dashboard is unaffected. To remove the preview, delete /opt/opencast
 - On mobile the sidebar and tiles stack to fit the screen.
 - Links navigate within the preview, the live test dashboard, or public documentation/feedback pages.
 - This is not ready for public deployment. Keep test VM ports LAN-only.
+
+## Retro skin for the live dashboard (opt-in)
+
+`retro.html` above is a static landing page. These files restyle the **working** creator console and the public pages in the same look, without changing behaviour:
+
+| File | Purpose |
+| --- | --- |
+| `retro-app.css` | Skin for the dashboard (`index.html`). Every rule is scoped to `html[data-theme="retro"]`. |
+| `theme.js` | Sets that attribute and adds a "Retro theme / Classic theme" button. Classic is the default. |
+| `site-retro.css` | Drop-in replacement for `site.css` (public `/p/...`, article and tip pages). |
+| `install-theme.sh` | Copies the files into the app's `public/` folder and adds two tags to `index.html`. |
+
+Inside VM 103, as root, from a checkout of this repository:
+
+    bash themes/retro-2000/install-theme.sh                  # dashboard toggle only
+    bash themes/retro-2000/install-theme.sh --public-pages   # also restyle /p/ pages
+    bash themes/retro-2000/install-theme.sh --remove         # full rollback
+
+Then open `http://<VM-IP>:8080/?theme=retro` (or press the button). `?theme=classic` switches back; the choice is remembered per browser in `localStorage` (`rw_theme`).
+
+What it does not do: it does not touch `server.mjs`, the database, Blossom, the relay or signing code, it downloads nothing, and it does not restart the stack. Element IDs, form fields and event handlers are unchanged. The public pages run no JavaScript, so their skin is an install-time choice rather than a per-visitor toggle.
+
+Known limits: the sidebar wordmark reads "RelayWave" through CSS only (the markup still says OpenCast), and the percentage bars in Insights stay empty in both themes because `app.js` writes them as inline `style` attributes, which the app's own CSP blocks.
