@@ -7,6 +7,7 @@ import { createHash, randomBytes } from 'node:crypto';
 const MAX_BYTES = 6 * 1024 * 1024;
 const LIFE_MS = 30 * 60_000;
 const COOLDOWN_MS = 12_000;
+const FETCH_DEADLINE_MS = 20_000;
 const XML_NS = 'https://podcastindex.org/namespace/1.0';
 const hash = value => createHash('sha256').update(value).digest('hex');
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
@@ -46,14 +47,26 @@ export async function fetchPublicFeed(value, { resolve = lookup, request = https
   // TLS still validates the original host name. Do not follow redirects.
   return await new Promise((resolveResult,rejectResult) => {
     let done = false;
+    let deadline;
     const finish = (err,body) => {
       if (done) return;
       done = true;
+      clearTimeout(deadline);
       err ? rejectResult(err) : resolveResult(body);
+    };
+    // Node >= 20 calls a custom lookup with {all:true} and then expects an
+    // array; answering with a bare string fails every request with
+    // ERR_INVALID_IP_ADDRESS. Answer in whichever shape was asked for.
+    const pinned = ips[0].address;
+    const pinnedLookup = (_hostname,options,callback) => {
+      if (typeof options === 'function') { callback = options; options = {}; }
+      if (options && options.all) callback(null,[{ address: pinned, family: 4 }]);
+      else callback(null,pinned,4);
     };
     const req = request(url,{
       method:'GET',
-      lookup:(_hostname,_options,callback) => callback(null,ips[0].address,4),
+      lookup:pinnedLookup,
+      agent:false,
       timeout:9000,
       maxHeaderSize:16384,
       headers:{
@@ -87,6 +100,13 @@ export async function fetchPublicFeed(value, { resolve = lookup, request = https
       res.on('error',()=>finish(fail('Could not read RSS feed',422)));
     });
     req.on('timeout',()=>req.destroy(new Error('timeout')));
+    // The socket timeout above only catches an idle connection. A host that
+    // drips one byte every few seconds would otherwise hold this request open
+    // for hours, so cap the whole exchange as well.
+    deadline = setTimeout(()=>{
+      finish(fail('RSS host took too long to respond',422));
+      req.destroy();
+    },FETCH_DEADLINE_MS);
     req.on('error',()=>finish(fail('Could not fetch RSS feed securely',422)));
     req.end();
   });
@@ -192,6 +212,11 @@ export function createFeedClaimsHandler({db,queueSave,authenticate,readBody,json
     }
     const key=owner+':'+hash(feedUrl);
     const current=now();
+    // Expired challenges were never removed, so the database grew with every
+    // abandoned attempt from every key.
+    for(const [k,v] of Object.entries(db.feedChallenges)){
+      if(!v || !(v.expiresAt>current))delete db.feedChallenges[k];
+    }
     if(path==='/api/feed-claims/start'){
       const active=Object.entries(db.feedChallenges)
         .filter(([k,v])=>k.startsWith(owner+':') && v.expiresAt>current);
@@ -221,6 +246,11 @@ export function createFeedClaimsHandler({db,queueSave,authenticate,readBody,json
       return true;
     }
     if(now()>=challenge.expiresAt)throw fail('Challenge expired while fetching the RSS feed',409);
+    // Re-check after the await: another account may have completed its own
+    // claim for this feed while ours was being fetched.
+    if(db.verifiedFeeds[feedUrl] && db.verifiedFeeds[feedUrl].owner!==owner){
+      throw fail('Already claimed by another account; manual review required',409);
+    }
     db.verifiedFeeds[feedUrl]={owner,verifiedAt:now(),method:'podcast:txt'};
     delete db.feedChallenges[key];
     await queueSave();
