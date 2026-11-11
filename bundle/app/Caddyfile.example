@@ -1,0 +1,14 @@
+{$DOMAIN} {
+  encode zstd gzip
+  reverse_proxy 127.0.0.1:8787
+
+  # Explicitly discard access logs. Do not enable request logging if you want the
+  # zero-day raw-IP retention promise to remain true at this proxy layer.
+  log {
+    output discard
+  }
+
+  header {
+    Strict-Transport-Security "max-age=31536000; includeSubDomains"
+  }
+}

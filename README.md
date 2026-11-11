@@ -24,7 +24,7 @@ bash /root/relaywave-install.sh
 Expected SHA-256 for this initial installer:
 
 ```
-b903baee8a8c2259a135462b8d5f955efd0743fe1d12595abdc8e1ccc1b7fb06
+ff4c00db8a1d8ebc3d2c3091819c5b4a7f57560fb1951c40d31bc44a022a6726
 ```
 
 ## Defaults
@@ -38,7 +38,7 @@ b903baee8a8c2259a135462b8d5f955efd0743fe1d12595abdc8e1ccc1b7fb06
 | Disk storage | Detected Proxmox image storage |
 | Container runtime | Podman installed in guest if needed |
 
-Installer prompts allow changing these defaults. It creates the VM, embeds the app in Cloud-Init, starts the VM, waits for the guest agent/app, and prints the discovered LAN IP and the generated VM console/SSH password.
+Installer prompts allow changing these defaults. It creates the VM, embeds the app in Cloud-Init, starts the VM, waits for the guest agent/app, and prints the discovered LAN IP and the generated VM console password. SSH password login is disabled in the guest; use the Proxmox console, or add your own SSH key from there.
 
 ## Service endpoints
 
@@ -111,7 +111,7 @@ Download the versioned repair **on PVE1** (do not reuse any old local `repair-vm
 curl -fsSL https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/repair-vm-v2.sh -o /root/relaywave-repair-v2.sh && bash /root/relaywave-repair-v2.sh 103
 ```
 
-The repair script pins the v2 runtime helper to commit `e8aa237` to avoid accidentally executing a cached older helper. No VM recreation or data-directory deletion is performed.
+The repair script verifies each helper it downloads against a SHA-256 digest written in the script, so an older or altered helper is refused. No VM recreation or data-directory deletion is performed.
 
 ## Retro-2000s visual preview
 
@@ -124,3 +124,23 @@ curl -fsSL https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/them
 ```
 
 Preview at **http://192.168.1.32:8080/retro.html**; original dashboard remains at **http://192.168.1.32:8080/**. This is a test preview, not yet a replacement theme for the real dashboard.
+
+## How downloads are verified
+
+Every script here that downloads another file from this repository checks it against a SHA-256 digest written in the calling script, and refuses to continue on a mismatch. The chain is: `update-vm.sh` and `install.sh` verify `features/install-feature.sh`, which verifies the app files and helper scripts it installs. Blossom is built from one pinned commit, and the Debian image is checked against Debian's published checksum list.
+
+The one-line `curl` commands in this README still fetch the first script from `main` unverified. Read it before running it, or compare `install.sh` with `install.sh.sha256` from a copy of the repository you trust.
+
+To test a branch or commit before it is merged, set `RELAYWAVE_REF`, for example `RELAYWAVE_REF=my-branch bash /root/relaywave-update.sh 103`. The digests must still match the files at that ref.
+
+## Changing the app or the scripts
+
+The app source lives in `bundle/` and is embedded into `install.sh`. After changing anything under `bundle/` or `features/`, or any script that downloads another, run:
+
+    tools/build-installer.sh
+
+It repacks the embedded bundle reproducibly, rewrites every digest, and updates `install.sh.sha256` and the digest quoted above. `tools/build-installer.sh --check` changes nothing and fails if those files are stale. Tests: `(cd bundle/app && npm test)` and `node --test features/feed-claims.test.mjs`.
+
+## Updating a VM installed before the security fixes
+
+Running the upgrade command above on VM 103 now also replaces `server.mjs`, `app.js` and `app.css` with the fixed versions (the previous copies are kept in `/opt/opencast-test/app/before-update/`), lowers the upload ceiling to 512 MB, and generates a new key for the test identity. The old test key was derivable from the source code. Content published under the old test identity stays in the database but is no longer reachable from the "Test identity" button.

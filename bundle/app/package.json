@@ -1,0 +1,16 @@
+{
+  "name": "opencast-nostr-publisher",
+  "version": "0.3.0-test",
+  "private": true,
+  "type": "module",
+  "description": "Testable Nostr-native managed publishing with privacy-preserving creator analytics, podcasts, Blossom media, Monero tips, discovery and cross-post previews.",
+  "scripts": {
+    "start": "node server.mjs",
+    "testapp": "TEST_MODE=1 node server.mjs",
+    "dev": "TEST_MODE=1 NODE_ENV=development node --watch server.mjs",
+    "test": "NODE_ENV=test node --test test/*.test.mjs"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

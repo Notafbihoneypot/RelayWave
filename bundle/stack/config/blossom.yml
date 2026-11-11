@@ -1,0 +1,55 @@
+port: 3000
+host: 0.0.0.0
+
+database:
+  path: data/sqlite.db
+
+storage:
+  backend: local
+  local:
+    dir: ./data/blobs
+  removeWhenNoOwners: false
+  rules: []
+
+upload:
+  enabled: true
+  requireAuth: true
+  maxSize: 536870912
+  workers: 1
+  maxJobsPerWorker: 2
+  throughputWindowMs: 1000
+  requirePubkeyInRule: false
+
+mirror:
+  enabled: false
+  requireAuth: true
+
+delete:
+  requireAuth: true
+
+list:
+  enabled: false
+  requireAuth: false
+  allowListOthers: false
+
+media:
+  enabled: false
+  requireAuth: true
+  requirePubkeyInRule: true
+  maxSize: 1073741824
+  tmpDir: ./data/media-tmp
+
+prune:
+  initialDelayMs: 60000
+  intervalMs: 300000
+  batchSize: 1000
+
+landing:
+  enabled: true
+  title: "OpenCast Local Blossom"
+
+report:
+  enabled: false
+
+dashboard:
+  enabled: false

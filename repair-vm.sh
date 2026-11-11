@@ -42,7 +42,20 @@ if ! command -v nft >/dev/null 2>&1; then
 fi
 echo "nft executable: $(command -v nft)"
 echo "Fixing short-name container image references..."
-curl -fsSL --retry 3 https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/features/qualify-images.sh -o /root/relaywave-qualify-images.sh
+REF=__RW_REF__
+SHA_QUALIFY_IMAGES_SH=afd0e76b2cf3a8143fd65adf3afc152145072d3ca41c3e04a5ccc32797732345
+SHA_REPAIR_RUNTIME_V2_SH=8a9bbb0564d267bbd6f968755f36dab0bd46da2fe86875eaf677300de14b328c
+rw_fetch() { # rw_fetch <path in repo> <sha256> <destination>
+  curl --fail --silent --show-error --location --retry 3 --proto '=https' --tlsv1.2 \
+    "https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/$REF/$1" -o "$3.download"
+  echo "$2  $3.download" | sha256sum --check --status || {
+    rm -f "$3.download"
+    echo "Checksum mismatch for $1 at ref '$REF'; refusing to use it." >&2
+    exit 1
+  }
+  mv "$3.download" "$3"
+}
+rw_fetch features/qualify-images.sh "$SHA_QUALIFY_IMAGES_SH" /root/relaywave-qualify-images.sh
 bash /root/relaywave-qualify-images.sh /opt/opencast-test
 echo "Installing the Podman DNS helper if missing..."
 if ! dpkg-query -W -f='${Status}' aardvark-dns 2>/dev/null | grep -qx 'install ok installed'; then
@@ -50,7 +63,7 @@ if ! dpkg-query -W -f='${Status}' aardvark-dns 2>/dev/null | grep -qx 'install o
   apt-get install -y --no-install-recommends aardvark-dns
 fi
 echo "Fixing the Nostr relay executable and stale test container names..."
-curl -fsSL --retry 3 https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/e8aa237190ae0e65702a2359ff42d0fb609dd3e5/features/repair-runtime-v2.sh -o /root/relaywave-repair-runtime-v2.sh
+rw_fetch features/repair-runtime-v2.sh "$SHA_REPAIR_RUNTIME_V2_SH" /root/relaywave-repair-runtime-v2.sh
 bash /root/relaywave-repair-runtime-v2.sh /opt/opencast-test
 echo "Restarting application stack..."
 if ! systemctl restart opencast-test.service; then
@@ -61,7 +74,7 @@ fi
 sleep 3
 systemctl is-active opencast-test.service
 /opt/opencast-test/scripts/status.sh
-source /etc/opencast-test.env
+LAN_IP="$(sed -n 's/^LAN_IP=//p' /etc/opencast-test.env | head -n 1)"
 if curl -fsS --max-time 8 "http://$LAN_IP:8080/api/config" >/dev/null; then
   echo "SUCCESS: dashboard http://$LAN_IP:8080"
   echo "Blossom: http://$LAN_IP:8081"
@@ -73,6 +86,10 @@ else
 fi
 GUEST_SCRIPT
 )"
+# Downloads inside the guest are verified against the digests above.
+REF="${RELAYWAVE_REF:-main}"
+[[ "$REF" =~ ^[A-Za-z0-9._/-]{1,100}$ ]] || { echo "Invalid RELAYWAVE_REF" >&2; exit 1; }
+GUEST_COMMAND="${GUEST_COMMAND//__RW_REF__/$REF}"
 
 if ! RESPONSE="$(qm guest exec "$VMID" --timeout 900 -- /bin/bash -lc "$GUEST_COMMAND" 2>&1)"; then
   echo "Failed to run the repair inside the guest:" >&2

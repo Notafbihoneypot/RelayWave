@@ -1,0 +1,212 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0b0c10">
+  <meta name="description" content="Nostr-native managed publishing, podcasting and Monero tips">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icons/icon.svg" type="image/svg+xml">
+  <link rel="stylesheet" href="/app.css">
+  <title>OpenCast Nostr Publisher</title>
+</head>
+<body>
+<div class="shell">
+  <aside class="sidebar">
+    <div class="brand"><span class="mark">O</span><div><strong>OpenCast</strong><small>Nostr publishing</small></div></div>
+    <nav>
+      <button class="nav active" data-view="overview">Overview</button>
+      <button class="nav" data-view="publication">Publication</button>
+      <button class="nav" data-view="article">Article</button>
+      <button class="nav" data-view="podcast">Podcast</button>
+      <button class="nav" data-view="media">Media</button>
+      <button class="nav" data-view="monero">Monero</button>
+      <button class="nav" data-view="insights">Insights</button>
+      <button class="nav" data-view="discover">Discover</button>
+      <button class="nav" data-view="crosspost">Cross-post</button>
+    </nav>
+    <div class="identity" id="identityBox"><span class="dot"></span><span id="identityText">Not connected</span></div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <div><p class="eyebrow">CREATOR CONSOLE</p><h1 id="viewTitle">Overview</h1></div>
+      <div class="top-actions">
+        <button class="button ghost" id="installBtn" hidden>Install</button>
+        <button class="button ghost" id="demoBtn" hidden>Test identity</button>
+        <button class="button ghost" id="androidLoginBtn">Android signer</button>
+        <button class="button primary" id="loginBtn">Connect Nostr</button>
+      </div>
+    </header>
+
+    <div id="testBanner" class="test-banner" hidden><strong>TEST MODE</strong> Demo signing is enabled. Do not use the demo identity for real funds or production publishing.</div>
+
+    <section class="view active" id="view-overview">
+      <div class="hero panel">
+        <div><p class="eyebrow">PUBLISH ONCE</p><h2>Web + Nostr + podcast RSS + Monero.</h2><p>Creators keep their Nostr identity. OpenCast manages the publishing infrastructure and produces portable output.</p></div>
+        <div class="status-stack">
+          <div><span>Identity</span><strong id="statusIdentity">Disconnected</strong></div>
+          <div><span>Hosted site</span><strong id="statusSite">Not configured</strong></div>
+          <div><span>Podcast RSS</span><strong id="statusRss">Not configured</strong></div>
+          <div><span>XMR tips</span><strong id="statusXmr">Not configured</strong></div>
+        </div>
+      </div>
+      <div class="grid four metrics-row">
+        <article class="metric panel"><span>Articles</span><strong id="articleCount">0</strong><small>NIP-23</small></article>
+        <article class="metric panel"><span>Episodes</span><strong id="episodeCount">0</strong><small>RSS + Nostr</small></article>
+        <article class="metric panel"><span>Cross-post jobs</span><strong id="crosspostCount">0</strong><small>test queue</small></article>
+        <article class="metric panel"><span>Media</span><strong id="mediaStatus">—</strong><small>Blossom</small></article>
+      </div>
+      <div class="panel">
+        <div class="section-head"><div><p class="eyebrow">TEST FLOW</p><h2>Everything is wired through one identity</h2></div><button class="button ghost" id="demoFillBtn" hidden>Fill sample data</button></div>
+        <div class="flow">
+          <span>Signer</span><b>→</b><span>Publication</span><b>→</b><span>Nostr</span><b>+</b><span>RSS</span><b>+</b><span>Website</span><b>+</b><span>XMR tips</span><b>+</b><span>Cross-post</span>
+        </div>
+        <div class="feature-grid"><span>✓ NIP-07</span><span>✓ NIP-55</span><span>✓ NIP-98</span><span>✓ NIP-23</span><span>✓ Blossom</span><span>✓ Podcasting 2.0 funding</span><span>✓ NIP-50 search</span><span>✓ Cross-post previews</span></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-publication">
+      <div class="panel form-panel">
+        <div class="section-head"><div><p class="eyebrow">PUBLICATION</p><h2>Site & distribution</h2></div><span class="pill">creator-owned key</span></div>
+        <label>Publication name<input id="pubTitle" maxlength="120" placeholder="The Privacy Dispatch"></label>
+        <label>Description<textarea id="pubDescription" maxlength="1000" rows="4" placeholder="Independent writing and audio..."></textarea></label>
+        <div class="grid two">
+          <label>Website URL<input id="pubWebsite" type="url" placeholder="https://example.com"></label>
+          <label>Cover image URL<input id="pubCover" type="url" placeholder="https://..."></label>
+        </div>
+        <div class="grid two">
+          <label>Language<input id="pubLanguage" maxlength="12" value="en" placeholder="en"></label>
+          <label>Categories<input id="pubCategories" placeholder="privacy, technology, monero"></label>
+        </div>
+        <label>Blossom server<input id="pubBlossom" type="url" placeholder="https://blossom.example.com"></label>
+        <label>Nostr relays<textarea id="pubRelays" rows="4" placeholder="One wss:// relay per line"></textarea></label>
+        <div class="grid two toggles">
+          <label class="toggle"><input id="pubPodcast" type="checkbox"><span>Enable podcast feed</span></label>
+          <label class="toggle"><input id="pubDiscoverable" type="checkbox" checked><span>Appear in OpenCast Explore</span></label>
+        </div>
+        <div class="button-row"><button class="button primary" id="savePublicationBtn">Save publication</button><button class="button secondary" id="publishPodcastMetaBtn">Publish Nostr podcast metadata</button><a class="button secondary linkbtn" id="siteLink" target="_blank" rel="noreferrer">Open site</a></div>
+        <div class="result" id="publicationResult"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-article">
+      <div class="panel form-panel">
+        <div class="section-head"><div><p class="eyebrow">NIP-23</p><h2>Write an article</h2></div><span class="pill">kind 30023</span></div>
+        <label>Title<input id="articleTitle" maxlength="200" placeholder="Why portable publishing matters"></label>
+        <div class="grid two"><label>Slug<input id="articleSlug" maxlength="160" placeholder="portable-publishing"></label><label>Topics<input id="articleTopics" placeholder="nostr, privacy, publishing"></label></div>
+        <label>Summary<textarea id="articleSummary" rows="3" maxlength="500"></textarea></label>
+        <label>Hero image URL<input id="articleImage" type="url" placeholder="https://..."></label>
+        <label>Markdown<textarea id="articleBody" class="editor" rows="16" placeholder="# Start writing\n\nYour article remains portable as a signed Nostr event."></textarea></label>
+        <div class="button-row"><button class="button primary" id="publishArticleBtn">Sign & publish</button></div>
+        <div class="result" id="articleResult"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-podcast">
+      <div class="panel form-panel">
+        <div class="section-head"><div><p class="eyebrow">PODCAST</p><h2>Publish an episode</h2></div><span class="pill">kind 54 + RSS</span></div>
+        <div class="callout">The RSS feed includes Podcasting 2.0 funding metadata when Monero is configured. Nostr episode metadata is signed with the creator identity.</div>
+        <label>Episode title<input id="episodeTitle" maxlength="200" placeholder="Episode 1 — Hello Nostr"></label>
+        <label>Description<textarea id="episodeDescription" rows="4" maxlength="1000"></textarea></label>
+        <div class="grid two"><label>Audio URL<input id="episodeAudio" type="url" placeholder="Upload in Media or paste HTTPS URL"></label><label>MIME type<select id="episodeMime"><option>audio/mpeg</option><option>audio/mp4</option><option>audio/ogg</option><option>audio/webm</option></select></label></div>
+        <label>Episode notes (Markdown)<textarea id="episodeBody" class="editor" rows="9"></textarea></label>
+        <div class="button-row"><button class="button primary" id="publishEpisodeBtn">Sign & publish episode</button><a class="button secondary linkbtn" id="rssLink" target="_blank" rel="noreferrer">Open RSS</a></div>
+        <div class="result" id="episodeResult"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-media">
+      <div class="panel form-panel">
+        <div class="section-head"><div><p class="eyebrow">BLOSSOM</p><h2>Upload media</h2></div><span class="pill">content addressed</span></div>
+        <p class="muted">Your browser hashes the file and requests a short-lived signed upload authorization. The file goes directly to the Blossom server.</p>
+        <label class="drop"><input id="mediaFile" type="file"><span>Choose audio, image or video</span><small id="mediaFileMeta">No file selected</small></label>
+        <div class="button-row"><button class="button primary" id="uploadMediaBtn">Authorize & upload</button></div>
+        <div class="result" id="mediaResult"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-monero">
+      <div class="panel form-panel">
+        <div class="section-head"><div><p class="eyebrow">MONERO</p><h2>Direct creator tips</h2></div><span class="pill green">0% platform cut</span></div>
+        <div class="callout">OpenCast stores public payment routing only. Never enter a seed, private spend key, or wallet password here.</div>
+        <label>Public Monero receiving address<input id="xmrAddress" autocomplete="off" placeholder="4... or 8..."></label>
+        <label>XMRChat creator page (optional)<input id="xmrChatUrl" type="url" placeholder="https://xmrchat.com/yourname"></label>
+        <div class="button-row"><button class="button primary" id="saveMoneroBtn">Save tip settings</button><a class="button secondary linkbtn" id="tipPageLink" target="_blank" rel="noreferrer">Open tip page</a><button class="button secondary" id="copyXmrBtn">Copy address</button></div>
+        <div class="result" id="moneroResult"></div>
+        <div class="mini-preview"><span>Listener flow</span><strong>Podcast / article → Tip with Monero → creator wallet</strong><small>Direct payments are not routed through the hosting service.</small></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-insights">
+      <div class="panel insights-panel">
+        <div class="section-head">
+          <div><p class="eyebrow">PRIVATE ANALYTICS</p><h2>Useful insights without listener profiles</h2></div>
+          <span class="pill green">aggregate only</span>
+        </div>
+        <div class="callout">Raw IP addresses and full User-Agent strings are never written to the analytics database. A short-lived in-memory daily token is used only to reduce duplicate counts, then disappears. Countries below the privacy threshold are grouped into <strong>Other</strong>; city tracking is disabled.</div>
+        <div class="button-row compact"><button class="button secondary" id="refreshInsightsBtn">Refresh insights</button><button class="button ghost" id="seedInsightsBtn" hidden>Seed private demo data</button></div>
+        <div class="result" id="insightsResult"></div>
+
+        <div class="grid four analytics-summary">
+          <article class="metric panel inset"><span>Today</span><strong id="insight1d">—</strong><small>deduped requests</small></article>
+          <article class="metric panel inset"><span>7 days</span><strong id="insight7d">—</strong><small>aggregate</small></article>
+          <article class="metric panel inset"><span>30 days</span><strong id="insight30d">—</strong><small>aggregate</small></article>
+          <article class="metric panel inset"><span>Lifetime</span><strong id="insightLifetime">—</strong><small>aggregate</small></article>
+        </div>
+
+        <div class="range-tabs" id="insightRanges">
+          <button class="range active" data-range="1d">24 hours</button><button class="range" data-range="7d">7 days</button><button class="range" data-range="30d">30 days</button><button class="range" data-range="lifetime">Lifetime</button>
+        </div>
+
+        <div class="analytics-grid">
+          <section class="analytics-card span2"><div class="card-title"><strong>Activity</strong><small id="chartRangeLabel">24 hours</small></div><div class="bar-chart" id="analyticsChart"></div></section>
+          <section class="analytics-card"><div class="card-title"><strong>Top content</strong><small>aggregate requests</small></div><div id="analyticsItems" class="rank-list"></div></section>
+          <section class="analytics-card span2"><div class="card-title"><strong>World reach</strong><small>country-level only · k≥5</small></div>
+            <div class="world-map" aria-label="Privacy-safe country map">
+              <svg viewBox="0 0 1000 500" role="img" aria-hidden="true"><path d="M75 132l74-61 105 9 58 54-35 57-70 15-39 61-65-18-43-57zM236 278l55 20 31 72-34 111-51-42-17-100zM447 91l82-36 88 28 25 51-45 33-14 73-55 12-53-43-51-37zM608 92l123-37 156 43 48 72-53 44-74-20-45 61-85-11-53-59zM548 250l82 13 42 91-63 116-75-38-27-108zM804 318l86-20 61 45-17 70-78 26-58-55z"/></svg>
+              <div id="analyticsMapPlot" class="map-plot"></div>
+            </div><div id="analyticsCountries" class="country-list"></div>
+          </section>
+          <section class="analytics-card"><div class="card-title"><strong>Listening apps</strong><small>coarse classification</small></div><div id="analyticsClients" class="rank-list"></div></section>
+          <section class="analytics-card"><div class="card-title"><strong>Discovery sources</strong><small>referrer category only</small></div><div id="analyticsReferrers" class="rank-list"></div></section>
+        </div>
+
+        <div class="privacy-grid">
+          <div><strong>0 days</strong><span>raw IP retention</span></div><div><strong>Never</strong><span>device fingerprints</span></div><div><strong>Off</strong><span>city tracking</span></div><div><strong>Never</strong><span>tip/listener correlation</span></div><div><strong>Daily</strong><span>dedupe secret rotation</span></div><div><strong>k≥5</strong><span>country suppression</span></div>
+        </div>
+        <p class="privacy-note">Privacy note: any public web server necessarily sees a connection address transiently while serving a request. OpenCast uses it only in memory for same-day deduplication and does not persist it. Your reverse proxy/VPS must also have access logging disabled for this guarantee to hold end-to-end.</p>
+      </div>
+    </section>
+
+    <section class="view" id="view-discover">
+      <div class="panel">
+        <div class="section-head"><div><p class="eyebrow">DISCOVER</p><h2>Search without one gatekeeper</h2></div><span class="pill">local + Nostr</span></div>
+        <div class="search-row"><input id="discoverQuery" placeholder="Search articles, podcasts, creators"><select id="discoverType"><option value="all">Everything</option><option value="creators">Creators</option><option value="articles">Articles</option><option value="podcasts">Podcasts</option></select><button class="button primary" id="discoverBtn">Search</button></div>
+        <div class="button-row compact"><button class="button ghost" id="nostrSearchBtn">Also query NIP-50 relays</button><button class="button ghost" id="podcastIndexBtn" hidden>Search Podcast Index</button></div>
+        <div class="result" id="discoverResult"></div>
+        <div class="cards" id="discoverCards"></div>
+      </div>
+    </section>
+
+    <section class="view" id="view-crosspost">
+      <div class="panel form-panel">
+        <div class="section-head"><div><p class="eyebrow">DISTRIBUTION</p><h2>Cross-post once, keep Nostr canonical</h2></div><span class="pill">test adapter</span></div>
+        <div class="callout">Testing build: Bluesky and X can open pre-filled compose pages; Mastodon text can be copied. “Simulate queue” tests our future paid automation path without storing social credentials.</div>
+        <label>Source<select id="crossSource"><option value="">Publish something first</option></select></label>
+        <div class="target-grid">
+          <label class="target"><input type="checkbox" id="targetBluesky" checked><span><strong>Bluesky</strong><small>compose preview</small></span></label>
+          <label class="target"><input type="checkbox" id="targetMastodon" checked><span><strong>Mastodon</strong><small>copy-ready</small></span></label>
+          <label class="target"><input type="checkbox" id="targetX"><span><strong>X</strong><small>compose preview</small></span></label>
+        </div>
+        <div class="button-row"><button class="button primary" id="crossPreviewBtn">Generate previews</button><button class="button secondary" id="crossSimBtn">Simulate queue</button></div>
+        <div class="result" id="crossResult"></div>
+        <div id="crossCards" class="cards"></div>
+      </div>
+    </section>
+  </main>
+</div>
+<div class="toast" id="toast"></div>
+<script type="module" src="/app.js"></script>
+</body>
+</html>

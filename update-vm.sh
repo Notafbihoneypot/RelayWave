@@ -11,7 +11,17 @@ NAME="$(qm config "$VMID" | sed -n 's/^name: //p')"
 qm status "$VMID" | grep -q '^status: running$' || { echo "VM $VMID is not running" >&2; exit 1; }
 qm guest cmd "$VMID" ping >/dev/null || { echo "Guest agent is unavailable in VM $VMID" >&2; exit 1; }
 echo "Updating RelayWave inside VM $VMID. Its data volumes will not be deleted."
-COMMAND='set -Eeuo pipefail; curl -fsSL --retry 3 https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/main/features/install-feature.sh -o /root/relaywave-feed-feature.sh; bash /root/relaywave-feed-feature.sh'
+# The in-guest installer is verified against this digest before it runs, and
+# it verifies everything it downloads in turn. RELAYWAVE_REF selects a branch
+# or commit for testing; the digests still have to match.
+REF="${RELAYWAVE_REF:-main}"
+[[ "$REF" =~ ^[A-Za-z0-9._/-]{1,100}$ ]] || { echo "Invalid RELAYWAVE_REF" >&2; exit 1; }
+SHA_INSTALL_FEATURE_SH=4ab0e443d5427e46f0ade9632b45030cd7d2ed855dfbfcfa8d6008245007fea3
+COMMAND="set -Eeuo pipefail
+curl --fail --silent --show-error --location --retry 3 --proto '=https' --tlsv1.2 'https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/$REF/features/install-feature.sh' -o /root/relaywave-feed-feature.sh.download
+echo '$SHA_INSTALL_FEATURE_SH  /root/relaywave-feed-feature.sh.download' | sha256sum --check --status || { rm -f /root/relaywave-feed-feature.sh.download; echo 'Checksum mismatch for install-feature.sh; nothing was run.' >&2; exit 1; }
+mv /root/relaywave-feed-feature.sh.download /root/relaywave-feed-feature.sh
+RELAYWAVE_REF='$REF' bash /root/relaywave-feed-feature.sh"
 RESULT="$(qm guest exec "$VMID" --timeout 900 -- /bin/bash -lc "$COMMAND")"
 printf '%s\n' "$RESULT" | python3 -c '
 import json,sys
@@ -27,4 +37,4 @@ code=response.get("exitcode",1)
 print("Guest installer exit code:", code)
 sys.exit(0 if code == 0 else 1)
 '
-echo "Update complete. Open http://192.168.1.32:8080 and select Import podcast."
+echo "Update complete. Open the dashboard URL printed above and select Import podcast."

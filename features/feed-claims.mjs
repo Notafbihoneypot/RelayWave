@@ -8,6 +8,11 @@ const MAX_BYTES = 6 * 1024 * 1024;
 const LIFE_MS = 30 * 60_000;
 const COOLDOWN_MS = 12_000;
 const FETCH_DEADLINE_MS = 20_000;
+// Any Nostr key is free to create, so per-key limits alone do not stop the
+// server being used to send requests to other hosts. Cap the whole process.
+const MAX_CONCURRENT_FETCHES = 4;
+const MAX_FETCHES_PER_MINUTE = 30;
+const MAX_OPEN_CHALLENGES = 5000;
 const XML_NS = 'https://podcastindex.org/namespace/1.0';
 const hash = value => createHash('sha256').update(value).digest('hex');
 const fail = (message, status = 400) => Object.assign(new Error(message), { status });
@@ -190,6 +195,8 @@ export function createFeedClaimsHandler({db,queueSave,authenticate,readBody,json
   db.feedChallenges ||= {};
   db.verifiedFeeds ||= {};
   const headers={'cache-control':'no-store'};
+  let inFlight=0;
+  const recentFetches=[];
   return async (req,res,path)=>{
     if(!['/api/feed-claims/start','/api/feed-claims/verify','/api/feed-claims/list'].includes(path))return false;
     if(!((path==='/api/feed-claims/list' && req.method==='GET') ||
@@ -221,6 +228,7 @@ export function createFeedClaimsHandler({db,queueSave,authenticate,readBody,json
       const active=Object.entries(db.feedChallenges)
         .filter(([k,v])=>k.startsWith(owner+':') && v.expiresAt>current);
       if(active.length>=5 && !db.feedChallenges[key])throw fail('Too many open verification challenges',429);
+      if(!db.feedChallenges[key] && Object.keys(db.feedChallenges).length>=MAX_OPEN_CHALLENGES)throw fail('Verification is busy; try again later',429);
       if(db.feedChallenges[key] && current-db.feedChallenges[key].createdAt<COOLDOWN_MS){
         throw fail('Please wait before generating another challenge',429);
       }
@@ -237,10 +245,17 @@ export function createFeedClaimsHandler({db,queueSave,authenticate,readBody,json
     if(!challenge || current>=challenge.expiresAt)throw fail('Challenge missing or expired. Generate a new code.',409);
     if(challenge.attempts>=8)throw fail('Too many failed attempts. Generate a new code.',429);
     if(current-challenge.lastAttemptAt<COOLDOWN_MS)throw fail('Wait a moment before retrying',429);
+    while(recentFetches.length && recentFetches[0]<=current-60_000)recentFetches.shift();
+    if(inFlight>=MAX_CONCURRENT_FETCHES || recentFetches.length>=MAX_FETCHES_PER_MINUTE){
+      throw fail('Verification is busy; try again in a minute',429);
+    }
     challenge.lastAttemptAt=current;
     challenge.attempts++;
     await queueSave();
-    const xml=await fetchFeed(feedUrl);
+    recentFetches.push(current);
+    inFlight++;
+    let xml;
+    try{xml=await fetchFeed(feedUrl);}finally{inFlight--;}
     if(!getVerificationTexts(xml).some(value=>hash(value)===challenge.digest)){
       json(res,422,{error:'Verification code not found in the channel-level podcast:txt purpose="verify" field. Wait for your host to update RSS, then retry.'},headers);
       return true;

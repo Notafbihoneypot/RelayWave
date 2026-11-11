@@ -139,55 +139,7 @@ Proposed starting point, to be tested against real transfer costs:
 
 What RelayWave offers that the table does not: no email at signup, an ownership proof signed by the creator's own key, and an exit that is guaranteed after payment stops. No host above combines all three.
 
-## 6. Security backlog
-
-Found during review of the LAN test stack. None of these are fixed unless marked.
-
-### Before any exposure beyond a trusted LAN
-
-- Blossom accepts uploads from any Nostr key, 2 GB per file, with no quota and no pruning.
-- The relay accepts any event from anyone.
-- `TEST_MODE` exposes an unauthenticated signing endpoint, and the demo key is derived from a fixed string in the source.
-- No limits beyond per-address rate limiting: any new key can write 1 MB articles into one in-memory JSON database, and can make the server fetch arbitrary public HTTPS URLs through feed verification.
-- The Podcast Index search proxy is unauthenticated.
-- Signed API requests are accepted for 90 seconds either side with no replay cache.
-- All traffic is plain HTTP.
-
-### Supply chain
-
-- `update-vm.sh`, `install-feature.sh`, `repair-vm*.sh` and the cloud-init bootstrap download scripts from the `main` branch and run them as root with no digest check.
-- The published SHA-256 for `install.sh` lives in the same repository it protects.
-- Container images and the Blossom source are unpinned; the Debian image is downloaded without a checksum.
-
-### Installer
-
-- Guest login uses password SSH with passwordless sudo.
-- The cloud-init snippet holding the password hash is briefly world-readable.
-- The VM name is written into the cloud-init YAML unvalidated.
-- The installer writes to a fixed path in `/tmp` as root on the Proxmox host.
-
-### Application
-
-- The Android signer return accepts a JSON event without comparing it to the request that was pending; only the public key is checked.
-- The tip page prints the raw `monero:` address string instead of the address card.
-- A signed episode containing a `null` tag is stored and then breaks discovery for everyone.
-- Article slugs such as `__proto__` are used as object keys.
-- Discovery links from Podcast Index are not restricted to http(s).
-- `?nip55pub=` sets the displayed identity with no proof.
-- Insights percentage bars are drawn with inline styles that the app's own content security policy blocks.
-- The import form ships with a real third-party feed URL filled in.
-- `tools/audit-feed.mjs` follows redirects with no private-address guard.
-
-### Fixed on this branch
-
-- The retro preview rendered unstyled under the app's content security policy.
-- Feed ownership verification could never succeed on Node 20 or later.
-- Slow feed hosts could hold a verification request open indefinitely.
-- Expired challenges were never deleted.
-- A claim completed by another account during a fetch could be overwritten.
-- The preview deploy reported success on any HTTP 200.
-
-## 7. Open decisions
+## 6. Open decisions
 
 1. Lost-key policy: no recovery, or account-number re-pointing with a waiting period (section 1).
 2. Whether card payments are ever accepted, given constraint 1.

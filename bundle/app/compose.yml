@@ -1,0 +1,26 @@
+services:
+  publisher:
+    build:
+      context: .
+      dockerfile: Containerfile
+    restart: unless-stopped
+    environment:
+      PORT: "8787"
+      PUBLIC_BASE_URL: "${PUBLIC_BASE_URL:-http://localhost:8787}"
+      DEFAULT_RELAYS: "${DEFAULT_RELAYS:-wss://relay.damus.io,wss://nos.lol,wss://relay.nostr.band}"
+      DEFAULT_BLOSSOM: "${DEFAULT_BLOSSOM:-https://blossom.primal.net}"
+      TEST_MODE: "${TEST_MODE:-0}"
+      DEMO_SECRET: "${DEMO_SECRET:-}"
+      PODCAST_INDEX_KEY: "${PODCAST_INDEX_KEY:-}"
+      PODCAST_INDEX_SECRET: "${PODCAST_INDEX_SECRET:-}"
+    ports:
+      - "8787:8787"
+    volumes:
+      - publisher-data:/app/data
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+
+volumes:
+  publisher-data:

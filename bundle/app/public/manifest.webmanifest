@@ -1,0 +1,12 @@
+{
+  "name": "OpenCast Nostr Publisher",
+  "short_name": "OpenCast",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait-primary",
+  "background_color": "#08090c",
+  "theme_color": "#0b0c10",
+  "description": "Creator-owned Nostr publishing, podcast RSS and Monero tips.",
+  "icons": [{"src":"/icons/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
