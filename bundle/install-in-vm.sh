@@ -60,6 +60,8 @@ rsync -a --delete "$BUNDLE_ROOT/app/" "$INSTALL_ROOT/app/"
 rsync -a "$BUNDLE_ROOT/stack/config/" "$INSTALL_ROOT/config/"
 rsync -a "$BUNDLE_ROOT/stack/scripts/" "$INSTALL_ROOT/scripts/"
 chmod +x "$INSTALL_ROOT/scripts/"*.sh
+# Render the upload allowlist (kept in config/uploaders.txt) into blossom.yml.
+RELAYWAVE_ROOT="$INSTALL_ROOT" "$INSTALL_ROOT/scripts/uploaders.sh" sync
 
 # Build Blossom from one reviewed commit, not whatever the default branch holds
 # today. Bump this deliberately after reading the upstream changes.
@@ -156,3 +158,5 @@ echo "Blossom edge: http://$LAN_IP:8081"
 echo "Nostr relay:  ws://$LAN_IP:7447"
 echo
 echo "TEST_MODE is ON. Do not port-forward these ports to the Internet."
+echo "Media uploads are closed until you allow an identity:"
+echo "  sudo $INSTALL_ROOT/scripts/uploaders.sh add <npub>      (or: add-test-identity)"

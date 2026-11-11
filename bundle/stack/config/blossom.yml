@@ -9,7 +9,14 @@ storage:
   local:
     dir: ./data/blobs
   removeWhenNoOwners: false
-  rules: []
+  # Upload allowlist. Only the identities listed here may upload, and only
+  # these media types. An empty list means nobody can upload.
+  rules:
+    # BEGIN RELAYWAVE UPLOADERS (managed by scripts/uploaders.sh; do not edit)
+    - type: "audio/*"
+      expiration: 100 years
+      pubkeys: []
+    # END RELAYWAVE UPLOADERS
 
 upload:
   enabled: true
@@ -18,7 +25,8 @@ upload:
   workers: 1
   maxJobsPerWorker: 2
   throughputWindowMs: 1000
-  requirePubkeyInRule: false
+  # Closed server: an upload must match a rule that names its public key.
+  requirePubkeyInRule: true
 
 mirror:
   enabled: false

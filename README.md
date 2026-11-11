@@ -24,7 +24,7 @@ bash /root/relaywave-install.sh
 Expected SHA-256 for this initial installer:
 
 ```
-ff4c00db8a1d8ebc3d2c3091819c5b4a7f57560fb1951c40d31bc44a022a6726
+ccc23f0a70836e1bc941d1f8b3d3b4a8582ca1a546253952859b419cb5307131
 ```
 
 ## Defaults
@@ -144,3 +144,16 @@ It repacks the embedded bundle reproducibly, rewrites every digest, and updates 
 ## Updating a VM installed before the security fixes
 
 Running the upgrade command above on VM 103 now also replaces `server.mjs`, `app.js` and `app.css` with the fixed versions (the previous copies are kept in `/opt/opencast-test/app/before-update/`), lowers the upload ceiling to 512 MB, and generates a new key for the test identity. The old test key was derivable from the source code. Content published under the old test identity stays in the database but is no longer reachable from the "Test identity" button.
+
+## Who can upload media
+
+The Blossom server is closed by default: nobody can upload until you allow their Nostr public key. Inside the VM:
+
+    sudo /opt/opencast-test/scripts/uploaders.sh add npub1...     # or 64-character hex
+    sudo /opt/opencast-test/scripts/uploaders.sh remove npub1...
+    sudo /opt/opencast-test/scripts/uploaders.sh list
+    sudo /opt/opencast-test/scripts/uploaders.sh add-test-identity
+
+`add-test-identity` allows the dashboard's "Test identity". Anyone who can reach the dashboard can sign as that identity, so it reopens uploads to everyone on your LAN; use it for testing only.
+
+Allowed identities can upload audio, images, WebVTT transcripts and JSON chapter files, up to 512 MB per file. Everything else is refused. Reading and downloading media is not restricted, and media uploaded before this change is kept. There is no per-identity storage quota yet; an allowed identity can still fill the disk.

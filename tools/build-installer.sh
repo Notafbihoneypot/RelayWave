@@ -47,6 +47,9 @@ pin features/install-feature.sh SHA_FEED_UI_JS           features/feed-ui.js
 pin features/install-feature.sh SHA_SERVER_MJS           bundle/app/server.mjs
 pin features/install-feature.sh SHA_APP_JS               bundle/app/public/app.js
 pin features/install-feature.sh SHA_APP_CSS              bundle/app/public/app.css
+pin features/install-feature.sh SHA_BLOSSOM_YML          bundle/stack/config/blossom.yml
+pin features/install-feature.sh SHA_NGINX_CONF           bundle/stack/config/nginx.conf
+pin features/install-feature.sh SHA_UPLOADERS_SH         bundle/stack/scripts/uploaders.sh
 for script in features/install-feature.sh repair-vm.sh repair-vm-v2.sh install.sh; do
   pin "$script" SHA_QUALIFY_IMAGES_SH    features/qualify-images.sh
   pin "$script" SHA_REPAIR_RUNTIME_V2_SH features/repair-runtime-v2.sh

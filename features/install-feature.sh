@@ -19,10 +19,13 @@ REF="${RELAYWAVE_REF:-main}"
 SHA_FEED_CLAIMS_MJS=30361e370c2d47b03fcd3496e1cfc2c98a9dd512a26cfb0b0e3abe77e3390f04
 SHA_FEED_UI_JS=d242779fa7ede5c98eefae4cfed083daaa86ca92e3c98e43cf50a6daa27a6387
 SHA_SERVER_MJS=2e9aa9c961d19bdb8ba14392de322fdfdbee3c3337b84c5c24078743bd742bc6
-SHA_APP_JS=ca8c74e6869c13e3a6041355e4392c290483d1d8d198ef45be0042be51e11094
+SHA_APP_JS=1ef463160d234fc89a0cb8e8d7c5e09717c4c59d6dc858503cc9bccd9b4d68d7
 SHA_APP_CSS=36a81380160a781957dccd3e00ea97af8f312d4942a9fe4596a432ee362e052b
 SHA_QUALIFY_IMAGES_SH=afd0e76b2cf3a8143fd65adf3afc152145072d3ca41c3e04a5ccc32797732345
 SHA_REPAIR_RUNTIME_V2_SH=8a9bbb0564d267bbd6f968755f36dab0bd46da2fe86875eaf677300de14b328c
+SHA_BLOSSOM_YML=8edc28c6d108894ca0ea43f2d5b0a06d0bd088a5e8423e2267cdbdbcc07adf9e
+SHA_NGINX_CONF=b8908c26fa41804a70eab01e9043a18431015fb180236b845a97aab27c613617
+SHA_UPLOADERS_SH=53c01786866fcdd3a6c2b5404788b9c8adcd1ad75db410ffcfaa06397e558a18
 rw_fetch() { # rw_fetch <path in repo> <sha256> <destination>
   curl --fail --silent --show-error --location --retry 3 --proto '=https' --tlsv1.2 \
     "https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/$REF/$1" -o "$3.download"
@@ -42,12 +45,16 @@ if [[ -n "${RELAYWAVE_FEATURE_DIR:-}" ]]; then
   APP_SRC="${RELAYWAVE_BUNDLE_APP_DIR:-$RELAYWAVE_FEATURE_DIR/../bundle/app}"
   cp "$RELAYWAVE_FEATURE_DIR/feed-claims.mjs" "$RELAYWAVE_FEATURE_DIR/feed-ui.js" "$STAGE/"
   cp "$APP_SRC/server.mjs" "$APP_SRC/public/app.js" "$APP_SRC/public/app.css" "$STAGE/"
+  cp "$APP_SRC/../stack/config/blossom.yml" "$APP_SRC/../stack/config/nginx.conf" "$APP_SRC/../stack/scripts/uploaders.sh" "$STAGE/"
 else
   rw_fetch features/feed-claims.mjs "$SHA_FEED_CLAIMS_MJS" "$STAGE/feed-claims.mjs"
   rw_fetch features/feed-ui.js "$SHA_FEED_UI_JS" "$STAGE/feed-ui.js"
   rw_fetch bundle/app/server.mjs "$SHA_SERVER_MJS" "$STAGE/server.mjs"
   rw_fetch bundle/app/public/app.js "$SHA_APP_JS" "$STAGE/app.js"
   rw_fetch bundle/app/public/app.css "$SHA_APP_CSS" "$STAGE/app.css"
+  rw_fetch bundle/stack/config/blossom.yml "$SHA_BLOSSOM_YML" "$STAGE/blossom.yml"
+  rw_fetch bundle/stack/config/nginx.conf "$SHA_NGINX_CONF" "$STAGE/nginx.conf"
+  rw_fetch bundle/stack/scripts/uploaders.sh "$SHA_UPLOADERS_SH" "$STAGE/uploaders.sh"
 fi
 # Bring the base app up to the reviewed revision (security fixes), keeping one
 # copy of what was there. The integration hooks below are then re-applied.
@@ -174,14 +181,18 @@ if 'DEMO_SECRET' not in s:
     needle='  -e "TEST_MODE=$TEST_MODE" \\\n'
     if s.count(needle)!=1: raise SystemExit('Could not find the TEST_MODE line in start.sh; nothing changed.')
     start.write_text(s.replace(needle,needle+'  -e "DEMO_SECRET=${DEMO_SECRET:-}" \\\n',1))
-for path,old,new in (('/opt/opencast-test/config/blossom.yml','  maxSize: 2147483648\n  workers: 1','  maxSize: 536870912\n  workers: 1'),
-                     ('/opt/opencast-test/config/nginx.conf','client_max_body_size 2048m;','client_max_body_size 512m;'),
-                     ('/opt/opencast-test/config/nginx.conf','client_max_body_size 32m;','client_max_body_size 2m;')):
-    p=Path(path)
-    if p.is_file():
-        c=p.read_text()
-        if old in c: p.write_text(c.replace(old,new,1)); print('Tightened',path)
 PY
+# Blossom and edge configuration: closed uploads (allowlist), audio/artwork
+# types only, 512 MB ceiling. The allowlist itself (config/uploaders.txt) is
+# kept; previously uploaded media is not touched.
+STACK=/opt/opencast-test
+mkdir -p "$STACK/config/before-update"
+for f in blossom.yml nginx.conf; do
+  [[ -f "$STACK/config/before-update/$f" ]] || cp -p "$STACK/config/$f" "$STACK/config/before-update/$f"
+  install -m 0644 "$STAGE/$f" "$STACK/config/$f"
+done
+install -m 0755 "$STAGE/uploaders.sh" "$STACK/scripts/uploaders.sh"
+RELAYWAVE_ROOT="$STACK" "$STACK/scripts/uploaders.sh" sync
 bash -n /opt/opencast-test/scripts/start.sh
 if ! dpkg-query -W -f='${Status}' aardvark-dns 2>/dev/null | grep -qx 'install ok installed'; then
   apt-get update
@@ -190,4 +201,5 @@ fi
 systemctl restart opencast-test.service
 systemctl is-active --quiet opencast-test.service
 echo "RelayWave feed-claim feature installed. Existing application data preserved."
+echo "Media uploads are limited to approved identities: sudo /opt/opencast-test/scripts/uploaders.sh add <npub>"
 echo "Dashboard: http://$(sed -n 's/^LAN_IP=//p' /etc/opencast-test.env | head -n 1):8080"

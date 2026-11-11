@@ -16,7 +16,7 @@ echo "Updating RelayWave inside VM $VMID. Its data volumes will not be deleted."
 # or commit for testing; the digests still have to match.
 REF="${RELAYWAVE_REF:-main}"
 [[ "$REF" =~ ^[A-Za-z0-9._/-]{1,100}$ ]] || { echo "Invalid RELAYWAVE_REF" >&2; exit 1; }
-SHA_INSTALL_FEATURE_SH=4ab0e443d5427e46f0ade9632b45030cd7d2ed855dfbfcfa8d6008245007fea3
+SHA_INSTALL_FEATURE_SH=ce2354b32dcf1d236c8926345ee40c69061192adfce055e2664b93730abd8999
 COMMAND="set -Eeuo pipefail
 curl --fail --silent --show-error --location --retry 3 --proto '=https' --tlsv1.2 'https://raw.githubusercontent.com/Notafbihoneypot/RelayWave/$REF/features/install-feature.sh' -o /root/relaywave-feed-feature.sh.download
 echo '$SHA_INSTALL_FEATURE_SH  /root/relaywave-feed-feature.sh.download' | sha256sum --check --status || { rm -f /root/relaywave-feed-feature.sh.download; echo 'Checksum mismatch for install-feature.sh; nothing was run.' >&2; exit 1; }

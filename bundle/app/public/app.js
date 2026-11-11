@@ -85,7 +85,7 @@ async function handleSigned(signed,c){
   if(c.type==='blossomUpload'){
     const record=await idbGet(c.fileKey);if(!record?.blob)throw new Error('Pending upload file unavailable');setResult('mediaResult','Authorized. Uploading to Blossom…');
     const res=await fetch(`${c.server}/upload`,{method:'PUT',headers:{Authorization:`Nostr ${b64Json(signed)}`,'Content-Type':record.type||'application/octet-stream'},body:record.blob});
-    const data=await res.json().catch(async()=>({error:await res.text().catch(()=>`HTTP ${res.status}`)}));if(!res.ok)throw new Error(data.error||data.message||`Blossom HTTP ${res.status}`);await idbDelete(c.fileKey);const url=data.url||`${c.server}/${c.hash}`;$('episodeAudio').value=url;setResult('mediaResult',`Uploaded: ${url}`);toast('Audio URL copied into Podcast');
+    const data=await res.json().catch(async()=>({error:await res.text().catch(()=>`HTTP ${res.status}`)}));if(!res.ok){const why=data.error||data.message||res.headers.get('x-reason')||`Blossom HTTP ${res.status}`;throw new Error([401,403].includes(res.status)?`${why}. Uploads on this node are limited to approved identities; ask the operator to allow your public key.`:why);}await idbDelete(c.fileKey);const url=data.url||`${c.server}/${c.hash}`;$('episodeAudio').value=url;setResult('mediaResult',`Uploaded: ${url}`);toast('Audio URL copied into Podcast');
   }
 }
 
