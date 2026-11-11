@@ -21,9 +21,9 @@ Replace the IP if the VM's DHCP address has changed. The script prints the actua
 ### What the deployer changes
 
 1. Verifies VM 103 is podcast-test and the guest agent works.
-2. Downloads the pinned HTML into /opt/opencast-test/app/public/retro.html in the guest, backing up any previous file.
-3. If opencast-app is running, copies that single page into /app/public without restarting the backend.
-4. Checks that the /retro.html page is served via the app.
+2. Downloads `retro.html` and `retro.css` from one pinned commit, verifies both against SHA-256 digests written in the script, and only then installs them into /opt/opencast-test/app/public/ in the guest, backing up any previous copies as `*.previous`.
+3. If opencast-app is running, copies those two files into /app/public without restarting the backend.
+4. Fetches both files back through the app and checks they are byte-identical to the reviewed versions.
 
 The preview also survives subsequent image rebuilds because it lives in the on-disk public source directory.
 
@@ -31,11 +31,19 @@ No VM recreation, Podman host installation, publishing changes, Nostr key change
 
 ### View without Proxmox
 
-The preview is one self-contained HTML file with inline CSS and SVG. Download retro.html from this folder and open it locally.
+The preview is two static files, `retro.html` and `retro.css`, with inline SVG and no scripts or remote assets. Keep them in the same folder and open `retro.html`, or run `python3 -m http.server 8000 --directory themes/retro-2000`.
+
+### Why the CSS is a separate file
+
+The RelayWave app sends `Content-Security-Policy: style-src 'self'; script-src 'self'` on every response. `<style>` blocks and `style=""` attributes are blocked by that policy, so the earlier single-file version rendered as unstyled text when served from port 8080. Keep all theme rules in `retro.css`; do not loosen the app's policy with `'unsafe-inline'` to accommodate a theme. The page also carries its own restrictive `<meta>` policy for when it is hosted elsewhere.
+
+### Changing the theme
+
+After editing either file, commit, then update `REF`, `HTML_SHA256` and `CSS_SHA256` at the top of the guest section in `deploy-to-vm.sh` (`sha256sum retro.html retro.css`). A mismatch makes the deployer stop before installing anything.
 
 ### Rollback
 
-The current dashboard is unaffected. To remove the preview, delete /opt/opencast-test/app/public/retro.html inside VM 103, then restart the RelayWave service at a convenient time to rebuild the image without it.
+The current dashboard is unaffected. To remove the preview, delete /opt/opencast-test/app/public/retro.html and retro.css (and any `*.previous` copies) inside VM 103, then restart the RelayWave service at a convenient time to rebuild the image without it.
 
 ### Notes
 
